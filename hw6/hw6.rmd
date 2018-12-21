@@ -1,0 +1,187 @@
+---
+title: STAT 153 Homework 6
+author: Donggyun Kim
+date: 12/20/2018
+output: pdf_document
+---
+
+```{r, include=FALSE}
+knitr::opts_chunk$set(fig.height=3.5, message=FALSE, warning=FALSE)
+```
+
+1. Interpretation of Spectral Density  
+
+Recall that one interpretation of the spectral density is that it gives the relative contributions of sinusoids of various frequencies to the process $X_t$. That is, $f(\lambda)$ gives the relative strength of frequency $\lambda$.  
+
+Let $Z_t$ be white noise with variance 1.  
+
+(a) Let $X_t = X_{t-1} - 0.9X_{t-2} + Z_t$  
+
+i) Plot its spectral density (you can use the "arma.spec" function). Which frequencies $f$ are dominant?  
+
+```{r}
+library(TSA)
+library(astsa)
+plot <- arma.spec(ar = c(1, -0.9), ma = 0, var.noise = 1)
+# dominant frequency
+freq_dominant <- plot$freq[which.max(plot$spec)]
+freq_dominant
+```
+
+(ii). Simulate the process for 50 time steps. If there is periodic behavior, compare the observed period with $\frac{1}{f}$, the inverse of the dominant frequencies from (i).  
+
+```{r}
+set.seed(1117)
+# simulate the process
+myarima <- arima.sim(n = 50, list(ar = c(1, -0.9)), sd = 1)
+plot(myarima)
+abline(v = 7, col = "red"); abline(v = 14, col = "red")
+abline(v = 21, col = "red"); abline(v = 27, col = "red")
+abline(v = 32, col = "red"); abline(v = 37, col = "red")
+# 1 / dominant frequency
+1 / freq_dominant
+```
+
+
+The plot of the simulated process shows it has period 5, 6 or 7, and $1/f \approx 6.2$. 
+
+b. Let $X'_t = -0.3X'_{t-2} - 0.9X'_{t-4} + Z_t$. Repeat the same procedure as above for this process.  
+```{r}
+plot <- arma.spec(ar = c(0, -0.3, 0, -0.9), ma = 0, var.noise = 1)
+# dominant frequency
+freq_dominant <- plot$freq[which.max(plot$spec)]
+freq_dominant
+set.seed(1117)
+# simulate the process
+myarima <- arima.sim(n = 50, list(ar = c(0, -0.3, 0, -0.9)), sd = 1)
+plot(myarima)
+abline(v = 3, col = "red"); abline(v = 6, col = "red")
+abline(v = 9, col = "red"); abline(v = 11, col = "red")
+abline(v = 14, col = "red"); abline(v = 17, col = "red")
+abline(v = 20, col = "red"); abline(v = 23, col = "red")
+# 1 / dominant frequency
+1 / freq_dominant
+```
+
+The plot of the simulated process shows it has period 2 or 3, and $1/f \approx 2.76$
+
+c. Let $X''_t = 0.9X''_{t-5} + Z_t$. Repeat the same procedure as above for this process.  
+```{r}
+plot <- arma.spec(ar = c(0, 0, 0, 0, 0.9), var.noise = 1)
+# dominant frequency
+freq_dominant <- plot$freq[which.max(plot$spec[-1])]
+freq_dominant
+set.seed(1117)
+# simulate the process
+myarima <- arima.sim(n = 50, list(ar = c(0, 0, 0, 0, 0.9)), sd = 1)
+plot(myarima)
+abline(v = 4, col = "red"); abline(v = 6, col = "red")
+abline(v = 9, col = "red"); abline(v = 12, col = "red")
+abline(v = 14, col = "red"); abline(v = 17, col = "red")
+abline(v = 19, col = "red"); abline(v = 22, col = "red")
+# 1 / dominant frequency
+1 / freq_dominant
+```
+
+The plot of the simulated process shows it has period 2 or 3, and $1/f \approx 2.51$
+
+$\newline$
+2. Spectral Density of AR Processes  
+Let $Z_t$ be a white noise process with variance 1. Consider the AR(3) process:  
+$$(1 - 0.9B^3)X_t = Z_t$$  
+
+a. Compute the transfer and power transfer functions associated with the AR polynomial ($1 - 0.9B^3$). Also, compute the spectral density $f_X(\lambda)$.  
+$\newline$
+$a_0 = 1, a_3 = -0.9,$ and $a_j = 0$ for all other j.  
+$A(\lambda) = \sum_ja_j\exp(-2\pi ij\lambda) = 1 - 0.9\exp(-6\pi i \lambda) = 1 - 0.9\cos(6\pi \lambda) + 0.9i\sin(6 \pi \lambda)$  
+${|A(\lambda)|}^2 = (1 - 0.9\cos(6\pi \lambda))^2 + 0.81\sin^2(6\pi\lambda) = 1 + 0.81 - 1.8\cos(6\pi\lambda) = 1.81 - 1.8\cos(6\pi\lambda)$  
+$f_X(\lambda) = \frac{|A_\theta(\lambda)|^2}{|A_\phi(\lambda)|^2} \cdot \sigma_Z^2 = \frac{1}{1.81 - 1.8\cos(6\pi\lambda)}$  
+
+b. Plot the spectral density $f_X(\lambda)$. Do you think $X_t$ will oscillate? If so, what period?  
+```{r}
+spectral_density <- function(x) {1 / (1.81 - 1.8 * cos(6 * pi * x))}
+curve(spectral_density, from = 0, to = 1/2, xlab = "lambda", 
+      ylab = "|A(lambda)|_squared")
+x <- seq(from = 0.3, to = 0.4, length.out = 1000)
+# dominant frequency
+freq_dominant <- x[which.max(spectral_density(x))]
+freq_dominant
+# period
+1 / freq_dominant
+```
+
+$X_t$ will oscillate with period 3.  
+
+$\newline$
+c. Simulate $X_t$ for 50 time steps. Is the simulation consistent with your answer to (b)?  
+```{r}
+set.seed(1117)
+myarima <- arima.sim(n = 50, list(ar = c(0, 0, 0.9)), sd = 1)
+plot(myarima, ylab = "X_t")
+abline(v = 5, col = "red"); abline(v = 7, col = "red")
+abline(v = 10, col = "red"); abline(v = 13, col = "red")
+abline(v = 16, col = "red"); abline(v = 19, col = "red")
+abline(v = 21, col = "red"); abline(v = 25, col = "red")
+```
+
+The plot of the simulated process shows that it has periods 2, 3, 4, or 5, but dominant period is 3. Thus, the simulation consistent with the answer to (b).  
+
+$\newline$
+d. Consider the linear filter with weights $a_{-1} = a_0 = a_1 = \frac{1}{3}$ ; $a_j = 0$ otherwise. Let $Y_t$ be the time series obtained by applying this filter to $X_t$. Compute the transfer function, power transfer function, and spectral density $f_Y(\lambda)$.  
+$\newline$
+$A(\lambda) = \sum_ja_j\exp(-2\pi ij\lambda) = \frac13 \exp(2\pi i\lambda) + \frac13\exp(0) + \frac13 \exp(-2\pi i\lambda) = \frac13 + \frac13\cos(2\pi\lambda)$  
+$|A(\lambda)|^2 = (\frac13 + \frac13\cos(2\pi\lambda))^2 = \frac19 + \frac29\cos(2\pi\lambda) + \frac19\cos^2(2\pi\lambda)$  
+(Since $\frac13 + \frac13\cos(2\pi\lambda) \ge 0$ for $-\frac12 \le \lambda \le \frac12$)  
+$\begin{aligned} f_Y(\lambda) &= f_X(\lambda)|A(\lambda)|^2 = \frac{\frac19 + \frac29\cos(2\pi\lambda) + \frac19\cos^2(2\pi\lambda)}{1.81 - 1.8\cos(6\pi\lambda)}  \\ &= \frac{1 + 2\cos(2\pi\lambda) + \cos^2(2\pi\lambda)}{16.29 -16.2\cos(6\pi\lambda)}\end{aligned}$  
+
+$\newline$
+e. Plot the spectral density $f_Y(\lambda)$. Do you think $Y_t$ will oscillate? If so, what period?  
+```{r}
+spectral_density <- function(x) {
+  (1 + 2 * cos(2 * pi * x) + cos(2 * pi * x)^2) / (16.29 + 16.2 * cos(6 * pi * x))
+}
+curve(spectral_density, from = 0, to = 1/2)
+x <- seq(from = 0.1, to = 0.2, length.out = 1000)
+# dominant frequency
+freq_dominant <- x[which.max(spectral_density(x))]
+freq_dominant
+# period
+1 / freq_dominant
+```
+
+$Y_t$ will oscillate with period 3.  
+
+$\newline$
+f. Simulate $Y_t$ by applying the filter from (d) to your simulated $X_t$ from (c). Is the simulation consistent with your answer to (d)?
+```{r}
+plot(filter(myarima, filter = c(1/3, 1/3, 1/3), method = "recursive"),
+     ylab = "Y_t")
+abline(v = 6, col = "red"); abline(v = 12, col = "red")
+abline(v = 18, col = "red"); abline(v = 23, col = "red")
+abline(v = 29, col = "red"); abline(v = 36, col = "red")
+abline(v = 39, col = "red"); abline(v = 42, col = "red")
+abline(v = 45, col = "red"); abline(v = 48, col = "red")
+```
+
+Domiant period is 3, so the simulation is not consistent with the answer to (d).  
+
+$\newline$
+3. DFT and Convolution  
+For data $x_0, \dots, x_{n-1}$ and $y_0, \dots, y_{n-1}$, we define their convolution $z_t$ as:  
+$$z_t = \sum_{k=0}^{n-1} x_{t-k}y_k$$  
+where $x_{-m} = x_{n-m}$ for negative values in the sum above. Show that the $j^{th}$ coefficient of DFT of $z_t$ is $b^Z_j = b^X_jb^Y_j$. That is, DFT coefficients of the convolution of $x_t$ and $y_t$ is equal to the product of their DFT coefficients. (This is analogous to the spectral density result from Shumway Problem 4.8)  
+$\begin{aligned} b_j^Z &= \sum_{t=0}^{n-1} z_t \exp(\frac{-2\pi ijt}{n}) = \sum_{t=0}^{n-1} \sum_{k=0}^{n-1} x_{t-k}y_k \exp(\frac{-2\pi ijt}{n}) \\ &= \sum_{k=0}^{n-1}y_k\sum_{t=0}^{n-1}x_{t-k}\exp(\frac{-2\pi i j t}{n}) = \sum_{k=0}^{n-1}y_k\sum_{s=-k}^{n-k-1}x_s \exp(\frac{-2\pi ij(s+k)}{n}) \\ &= \sum_{k = 0}^{n-1} y_k \exp(\frac{-2\pi ijk}{n})\sum_{s = -k}^{n-k-1}x_s\exp(\frac{-2\pi ijs}{n})\end{aligned}$  
+Since $x_{-k} = x_{n-k}, \cdots, x_{-1} = x_{n-1}$ and  
+$\exp(\frac{-2\pi ij(-k)}{n}) = \exp(\frac{2\pi ijk}{n})\exp(-2\pi ijk) = \exp(\frac{2\pi ijk}{n})\exp(\frac{-2\pi ijnk}{n}) = \exp(\frac{-2\pi ij(n-k)}{n})$  
+$\implies \sum_{s = -k}^{n-k-1}x_s\exp(\frac{-2\pi ijs}{n}) = \sum_{s = 0}^{n-1}x_s\exp(\frac{-2\pi ijs}{n})$  
+$\implies b^Z_j = b^X_jb^Y_j$  
+
+$\newline$
+4. DFT and Periodic Data  
+Suppose the data $x_t$ is h-cyclic for some positive integer $h$: $x_{t+h} = x_t$ for all integers t. Now, suppose the DFT of the first cycle $x_0, \dots, x_{h-1}$ is $\beta_0, \dots, \beta_{h-1}$.  
+For $n = kh$, show that the DFT of $x_0, \dots, x_{n-1}$ is $b_j = b_{mk} = k\beta_m$ for multiples of k and $b_j = 0$ otherwise.  
+$\begin{aligned}b_j &= \sum_{t=0}^{n-1} x_t \exp(\frac{-2\pi ijt}{n}) = \sum_{t=0}^{kh-1} x_t \exp(\frac{-2\pi ijt}{kh}) \\ &= \sum_{t=0}^{h-1}x_t\exp(\frac{-2\pi ijt}{kh}) + \sum_{t=h}^{2h-1}x_t\exp(\frac{-2\pi ijt}{kh}) + \cdots + \sum_{t=(k-1)h}^{kh-1}x_t\exp(\frac{-2\pi ijt}{kh}) \\ &= \sum_{t=0}^{h-1}x_t\exp(\frac{-2\pi ijt}{kh}) + \sum_{t=0}^{h-1}x_t\exp(\frac{-2\pi ij(t + h)}{kh}) + \cdots + \sum_{t=0}^{h-1}x_t\exp(\frac{-2\pi ij(t+(k-1)h)}{kh}) \\ &= \sum_{t=0}^{h-1}x_t\exp(\frac{-2\pi ijt}{kh})\left(1 + \exp(\frac{-2\pi ij}{k}) + \cdots + \exp(\frac{-2\pi ij(k-1)}{k})\right)\end{aligned}$  
+For $j = mk$  
+$\begin{aligned}b_j &= b_{mk} = \sum_{t=0}^{h-1}x_t\exp(\frac{-2\pi imt}{h})\left(1 + \exp(-2\pi im) + \cdots + \exp(-2\pi im(k-1))\right) \\ &= k\sum_{t=0}^{h-1}x_t\exp(\frac{-2\pi imt}{h}) = k\beta_m\end{aligned}$  
+For $j \ne mk$  
+$\begin{aligned}b_j &= \sum_{t=0}^{h-1}x_t\exp(\frac{-2\pi ijt}{kh})\left(1 + \exp(\frac{-2\pi ij}{k}) + \cdots + \exp(\frac{-2\pi ij(k-1)}{k})\right) \\ &= \sum_{t=0}^{h-1}x_t\exp(\frac{-2\pi ijt}{kh})\left(\frac{1 - \exp(-2\pi ij)}{1 - \exp(\frac{-2\pi ij}{k})}\right) = 0\end{aligned}$  
